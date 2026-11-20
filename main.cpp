@@ -1,3 +1,9 @@
+/* ***********
+
+look to end of code for some citations
+
+*********** */
+
 #include <iostream>
 #include <string>
 #include <vector>
@@ -78,7 +84,8 @@ int main() {
 
     // annoucement in terminal
     cout << endl;
-    cout << "ATTENTION: Read these directions before proceeding to the port. Select 4 songs that will appear on the display. Be sure to click the name of the song you want selected. Once a song is selected is CANNOT be replaced. Upon selection of the song, you will be redirected to another screen. Please proceed to the port. Thank you! :)   ";
+    cout << "ATTENTION: Read these directions before proceeding to the port. Select 4 songs that will appear on the display. Be sure to click the name of the song you want selected!!! Once a song is selected is CANNOT be replaced. Upon selection of the song, you will be redirected to another screen. Please proceed to the port. Thank you! :)";
+    cout << endl;
 
     // ******
     // ****** TO BE CHANGED: VECTOR OF SONG INFORMATION *******
@@ -110,6 +117,7 @@ int main() {
     }
 
     // adding the selected songs the user picked to a vector
+    // link 2 (check end of code)
     for (int i = 0; i < songInfo.size(); ++i) {
         Rectangle songArea = {110, (340 + (i * 40)), 200, 30};
 
@@ -123,7 +131,7 @@ int main() {
     //
     //
     /* TO CONTINUE FOR NEXT TIME: 
-    WITH THIS SELECTED SONGS VECTOR, TEAMATE IS GOING TO
+    WITH THIS SELECTED SONGS VECTOR, TEAMMATE IS GOING TO
     CLASSIFY THE PERSON BASED ON THE SONGS THEY CHOOSE
     AFTER THAT:
     WILL MAKE A SCREEN TO DISPLAY WHAT THE CODE THINKS THAT PERSON IS LIKE */
@@ -148,6 +156,7 @@ int main() {
         string genreKey = "Genre";
         string durationKey = "Duration";
        
+        // coordinate system understanding from link 1 (check end of code)
         // making header
         DrawText(yourPlaylist.c_str(), 220, 65, 90, WHITE);
         DrawCircle(100, 100, 70, LIME);
@@ -183,8 +192,31 @@ int main() {
             DrawText(songInfo.at(i).GetDuration().c_str(), 1110, 340 + (i * 40), 20, WHITE);
         }
 
+
         EndDrawing();
+
     }
 
     return 0;
 }
+
+
+
+/* 
+
+Link 1: 
+This code was adpated from
+https://youtu.be/RGzj-PF7D74?si=8OhCLHy0wwLSN3le
+Accessed: Nov 17, 2026
+Aided in overall understanding of Raylib
+Used specifically in the understanding of how the coordinate system works
+
+
+Link 2: 
+This code was adapted from
+https://youtu.be/klqbAOAFBXw?si=Srq6evwa5dmJy5hG
+Accessed: Nov 20, 2026
+Aided in creation adding selected songs to new vector
+by using Raylib CheckCollision function
+
+*/
