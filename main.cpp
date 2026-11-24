@@ -101,11 +101,14 @@ int main() {
     vector<string> songGenre = {"genre1", "genre2", "genre3", "genre4", "genre5", "genre6", "genre7", "genre8", "genre9", "genre10"};
     vector<string> songDuration = {"duration1", "duration2", "duration3", "duration4", "duration5", "duration6", "duration7", "duration8", "duration9", "duration10"};
 
+    // tracks which screen user is on
+    // want one song per screen
+    int currentScreen = 1;
+
     // creating 2 vectors. one for all the classifying details of the song
     // another for the 4 songs the user will pick
     vector<SongInformation> songInfo;
     vector<SongInformation> selectedSongs;
-
 
     // adding all the information from our single detail vectors
     // to a vector that has all the information, with the class SongInformation 
@@ -145,66 +148,111 @@ int main() {
 
 
     while (!WindowShouldClose()) {
-        
+
         // adding the selected songs the user picked to a vector
         // link 2 (check end of code)
         for (int i = 0; i < songInfo.size(); ++i) {
             Rectangle songArea = {110, (340 + (i * 40)), 200, 30};
 
-            if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON) && CheckCollisionPointRec(GetMousePosition(), songArea) && selectedSongs.size() < 4) {
+            if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON) && CheckCollisionPointRec(GetMousePosition(), songArea) && selectedSongs.size() < 10) {
                 selectedSongs.push_back(songInfo.at(i));
                 cout << "Song: " << songInfo.at(i).GetTitle() << endl;
+                currentScreen++;
+                break;
             }
         }
         
         BeginDrawing();
         ClearBackground(BLACK);
 
-        Rectangle source = { 0, 0, (float)photo.width, (float)photo.height };
-        Rectangle dest   = { 0, 0, 1300, 200 };
+        if (currentScreen <= 10) {
+            Rectangle source = { 0, 0, (float)photo.width, (float)photo.height };
+            Rectangle dest   = { 0, 0, 1300, 200 };
 
-        DrawTexturePro(photo, source, dest, {0, 0}, 0.0f, WHITE);
+            DrawTexturePro(photo, source, dest, {0, 0}, 0.0f, WHITE);
 
-        // text display strings
-        string yourPlaylist = "YOUR PLAYLIST :)";
-        string poundKey = "#";
-        string titleKey = "Title";
-        string albumKey = "Album";
-        string genreKey = "Genre";
-        string durationKey = "Duration";
+            // text display strings
+            string yourPlaylist = "YOUR PLAYLIST :)";
+            string poundKey = "#";
+            string titleKey = "Title";
+            string albumKey = "Album";
+            string genreKey = "Genre";
+            string durationKey = "Duration";
+            string message1 = "Please Select a Song";
+            string message2 = "Screen " + to_string(currentScreen) + "/10";
+            // when using static_cast for line 182, yielded in an error. 
+            // the to_string code was written with the help of gemini 
+            // when prompted "can static_cast be used to convert this integer variable to a string"
+            // ascessed: Nov 23, 2026
        
-        // coordinate system understanding from link 1 (check end of code)
+            // coordinate system understanding from link 1 (check end of code)
+            DrawLine(0, 200, 1300, 200, WHITE);
 
-        DrawLine(0, 200, 1300, 200, WHITE);
+            // making play button
+            DrawCircle(50, 240, 25, LIME);
+            DrawTriangle(Vector2{42, 225}, Vector2{42, 255}, Vector2{65, 240}, BLACK);
 
-        // making play button
-        DrawCircle(50, 240, 30, LIME);
-        DrawTriangle(Vector2{42, 225}, Vector2{42, 255}, Vector2{65, 240}, BLACK);
+            // on screen directions
+            DrawText(message1.c_str(), 90, 230, 25, LIME);
+            DrawText(message2.c_str(), 1000, 230, 25, LIME);
         
-        // making settings button
-        DrawCircle(1200, 240, 5, WHITE);
-        DrawLine(1215, 240, 1275, 240, WHITE);
-        DrawCircle(1200, 225, 5, WHITE);
-        DrawLine(1215, 225, 1275, 225, WHITE);
-        DrawCircle(1200, 255, 5, WHITE);
-        DrawLine(1215, 255, 1275, 255, WHITE);
+            // making settings button
+            DrawCircle(1200, 240, 5, WHITE);
+            DrawLine(1215, 240, 1275, 240, WHITE);
+            DrawCircle(1200, 225, 5, WHITE);
+            DrawLine(1215, 225, 1275, 225, WHITE);
+            DrawCircle(1200, 255, 5, WHITE);
+            DrawLine(1215, 255, 1275, 255, WHITE);
         
-        // making the filters
-        DrawLine(0, 320, 1300, 320, WHITE);
-        DrawText(poundKey.c_str(), 40, 290, 20, WHITE);
-        DrawText(titleKey.c_str(), 110, 290, 20, WHITE);
-        DrawText(albumKey.c_str(), 400, 290, 20, WHITE);
-        DrawText(genreKey.c_str(), 770, 290, 20, WHITE);
-        DrawText(durationKey.c_str(), 1110, 290, 20, WHITE);
+            // making the filters
+            DrawLine(0, 320, 1300, 320, WHITE);
+            DrawText(poundKey.c_str(), 40, 290, 20, WHITE);
+            DrawText(titleKey.c_str(), 110, 290, 20, WHITE);
+            DrawText(albumKey.c_str(), 400, 290, 20, WHITE);
+            DrawText(genreKey.c_str(), 770, 290, 20, WHITE);
+            DrawText(durationKey.c_str(), 1110, 290, 20, WHITE);
 
-        // looping through the vector of songs. calling our functions to place 
-        // the number, title, album, etc of the song in a list on the screen
-        for (int i = 0; i < songInfo.size(); ++i) {
-            DrawText(songInfo.at(i).GetNumber().c_str(), 40, 340 + (i * 40), 20, WHITE);
-            DrawText(songInfo.at(i).GetTitle().c_str(), 110, 340 + (i * 40), 20, WHITE);
-            DrawText(songInfo.at(i).GetAlbum().c_str(), 400, 340 + (i * 40), 20, WHITE);
-            DrawText(songInfo.at(i).GetGenre().c_str(), 770, 340 + (i * 40), 20, WHITE);
-            DrawText(songInfo.at(i).GetDuration().c_str(), 1110, 340 + (i * 40), 20, WHITE);
+            // looping through the vector of songs. calling our functions to place 
+            // the number, title, album, etc of the song in a list on the screen
+            for (int i = 0; i < songInfo.size(); ++i) {
+                DrawText(songInfo.at(i).GetNumber().c_str(), 40, 340 + (i * 40), 20, WHITE);
+                DrawText(songInfo.at(i).GetTitle().c_str(), 110, 340 + (i * 40), 20, WHITE);
+                DrawText(songInfo.at(i).GetAlbum().c_str(), 400, 340 + (i * 40), 20, WHITE);
+                DrawText(songInfo.at(i).GetGenre().c_str(), 770, 340 + (i * 40), 20, WHITE);
+                DrawText(songInfo.at(i).GetDuration().c_str(), 1110, 340 + (i * 40), 20, WHITE);
+            }
+        }
+        else {
+            DrawText("Check", 250, 250, 50, LIME);
+
+            /*if (value = 1) {
+                Texture2D photo = LoadTexture("spotifypicture.jpeg");
+                if (photo.id == 0) {
+                    CloseWindow();
+                    return -1;
+                }
+                Rectangle source = { 0, 0, (float)photo.width, (float)photo.height };
+                Rectangle dest   = { 0, 0, 1300, 200 };
+                DrawTexturePro(photo, source, dest, {0, 0}, 0.0f, WHITE);
+            }
+            else if (value = 2) {
+
+            }
+            else if (value = 3) {
+
+            }
+            else if (value = 4) {
+
+            }
+            else if (value = 5) {
+
+            }
+            else if (value = 6) {
+
+            }
+            else if (value = 7) {
+
+            }*/
         }
 
         
