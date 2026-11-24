@@ -25,6 +25,7 @@ class SongInformation {
         string GetAlbum();
         string GetGenre();
         string GetDuration();
+        string GetSelectedSong();
 
     private:
         string number;
@@ -32,6 +33,7 @@ class SongInformation {
         string album;
         string genre;
         string duration;
+        string returnSelctedSong;
 };
 
 // takes the number in the position of the vector
@@ -79,6 +81,9 @@ string SongInformation::GetDuration() {
     return duration;
 }
 
+string SongInformation::GetSelectedSong() {
+    return returnSelctedSong;
+}
 
 int main() {
 
@@ -116,17 +121,6 @@ int main() {
         songInfo.push_back(currentSong);
     }
 
-    // adding the selected songs the user picked to a vector
-    // link 2 (check end of code)
-    for (int i = 0; i < songInfo.size(); ++i) {
-        Rectangle songArea = {110, (340 + (i * 40)), 200, 30};
-
-        if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON) && CheckCollisionPointRec(GetMousePosition(), songArea) && selectedSongs.size() < 4) {
-            selectedSongs.push_back(songInfo.at(i));
-        }
-
-    }
-
     //
     //
     //
@@ -143,10 +137,33 @@ int main() {
     InitWindow(1300, 800, "Spotify Playlist");
     SetTargetFPS(30);
 
+    Texture2D photo = LoadTexture("spotifypicture.jpeg");
+    if (photo.id == 0) {
+        CloseWindow();
+        return -1;
+    }
+
 
     while (!WindowShouldClose()) {
+        
+        // adding the selected songs the user picked to a vector
+        // link 2 (check end of code)
+        for (int i = 0; i < songInfo.size(); ++i) {
+            Rectangle songArea = {110, (340 + (i * 40)), 200, 30};
+
+            if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON) && CheckCollisionPointRec(GetMousePosition(), songArea) && selectedSongs.size() < 4) {
+                selectedSongs.push_back(songInfo.at(i));
+                cout << "Song: " << songInfo.at(i).GetTitle() << endl;
+            }
+        }
+        
         BeginDrawing();
         ClearBackground(BLACK);
+
+        Rectangle source = { 0, 0, (float)photo.width, (float)photo.height };
+        Rectangle dest   = { 0, 0, 1300, 200 };
+
+        DrawTexturePro(photo, source, dest, {0, 0}, 0.0f, WHITE);
 
         // text display strings
         string yourPlaylist = "YOUR PLAYLIST :)";
@@ -157,9 +174,7 @@ int main() {
         string durationKey = "Duration";
        
         // coordinate system understanding from link 1 (check end of code)
-        // making header
-        DrawText(yourPlaylist.c_str(), 220, 65, 90, WHITE);
-        DrawCircle(100, 100, 70, LIME);
+
         DrawLine(0, 200, 1300, 200, WHITE);
 
         // making play button
@@ -192,10 +207,13 @@ int main() {
             DrawText(songInfo.at(i).GetDuration().c_str(), 1110, 340 + (i * 40), 20, WHITE);
         }
 
-
+        
         EndDrawing();
 
     }
+
+    UnloadTexture(photo);
+    CloseWindow();
 
     return 0;
 }
