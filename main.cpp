@@ -225,8 +225,13 @@ int main() {
         else {
             DrawText("Check", 250, 250, 50, LIME);
 
-            /*if (value = 1) {
-                Texture2D photo = LoadTexture("spotifypicture.jpeg");
+            // **********
+            // will replace; just here as placeholder until we get all code together
+            // **********
+            int averageScore = 1;
+
+            if (averageScore == 1) {
+                Texture2D photo = LoadTexture("pop.jpeg");
                 if (photo.id == 0) {
                     CloseWindow();
                     return -1;
@@ -235,24 +240,96 @@ int main() {
                 Rectangle dest   = { 0, 0, 1300, 200 };
                 DrawTexturePro(photo, source, dest, {0, 0}, 0.0f, WHITE);
             }
-            else if (value = 2) {
-
+            else if (averageScore == 2) {
+                Texture2D photo = LoadTexture("rap.jpeg");
+                if (photo.id == 0) {
+                    CloseWindow();
+                    return -1;
+                }
+                Rectangle source = { 0, 0, (float)photo.width, (float)photo.height };
+                Rectangle dest   = { 0, 0, 1300, 200 };
+                DrawTexturePro(photo, source, dest, {0, 0}, 0.0f, WHITE);
             }
-            else if (value = 3) {
-
+            else if (averageScore == 3) {
+                Texture2D photo = LoadTexture("randb.jpeg");
+                if (photo.id == 0) {
+                    CloseWindow();
+                    return -1;
+                }
+                Rectangle source = { 0, 0, (float)photo.width, (float)photo.height };
+                Rectangle dest   = { 0, 0, 1300, 200 };
+                DrawTexturePro(photo, source, dest, {0, 0}, 0.0f, WHITE);
             }
-            else if (value = 4) {
-
+            else if (averageScore == 4) {
+                Texture2D photo = LoadTexture("dance.jpeg");
+                if (photo.id == 0) {
+                    CloseWindow();
+                    return -1;
+                }
+                Rectangle source = { 0, 0, (float)photo.width, (float)photo.height };
+                Rectangle dest   = { 0, 0, 1300, 200 };
+                DrawTexturePro(photo, source, dest, {0, 0}, 0.0f, WHITE);
             }
-            else if (value = 5) {
-
+            else if (averageScore == 5) {
+                Texture2D photo = LoadTexture("rock.jpeg");
+                if (photo.id == 0) {
+                    CloseWindow();
+                    return -1;
+                }
+                Rectangle source = { 0, 0, (float)photo.width, (float)photo.height };
+                Rectangle dest   = { 0, 0, 1300, 200 };
+                DrawTexturePro(photo, source, dest, {0, 0}, 0.0f, WHITE);
             }
-            else if (value = 6) {
-
+            else if (averageScore == 6) {
+                Texture2D photo = LoadTexture("indie.jpeg");
+                if (photo.id == 0) {
+                    CloseWindow();
+                    return -1;
+                }
+                Rectangle source = { 0, 0, (float)photo.width, (float)photo.height };
+                Rectangle dest   = { 0, 0, 1300, 200 };
+                DrawTexturePro(photo, source, dest, {0, 0}, 0.0f, WHITE);
             }
-            else if (value = 7) {
-
-            }*/
+            else if (averageScore == 7) {
+                Texture2D photo = LoadTexture("country.jpeg");
+                if (photo.id == 0) {
+                    CloseWindow();
+                    return -1;
+                }
+                Rectangle source = { 0, 0, (float)photo.width, (float)photo.height };
+                Rectangle dest   = { 0, 0, 1300, 200 };
+                DrawTexturePro(photo, source, dest, {0, 0}, 0.0f, WHITE);
+            }
+            else if (averageScore == 8) {
+                Texture2D photo = LoadTexture("jazz.jpeg");
+                if (photo.id == 0) {
+                    CloseWindow();
+                    return -1;
+                }
+                Rectangle source = { 0, 0, (float)photo.width, (float)photo.height };
+                Rectangle dest   = { 0, 0, 1300, 200 };
+                DrawTexturePro(photo, source, dest, {0, 0}, 0.0f, WHITE);
+            }
+            else if (averageScore == 9) {
+                Texture2D photo = LoadTexture("afrobeats.jpeg");
+                if (photo.id == 0) {
+                    CloseWindow();
+                    return -1;
+                }
+                Rectangle source = { 0, 0, (float)photo.width, (float)photo.height };
+                Rectangle dest   = { 0, 0, 1300, 200 };
+                DrawTexturePro(photo, source, dest, {0, 0}, 0.0f, WHITE);
+            }
+            else if (averageScore == 10) {
+                Texture2D photo = LoadTexture("classical.jpeg");
+                if (photo.id == 0) {
+                    CloseWindow();
+                    return -1;
+                }
+                Rectangle source = { 0, 0, (float)photo.width, (float)photo.height };
+                Rectangle dest   = { 0, 0, 1300, 200 };
+                DrawTexturePro(photo, source, dest, {0, 0}, 0.0f, WHITE);
+            }
         }
 
         
@@ -284,5 +361,17 @@ https://youtu.be/klqbAOAFBXw?si=Srq6evwa5dmJy5hG
 Accessed: Nov 20, 2026
 Aided in creation adding selected songs to new vector
 by using Raylib CheckCollision function
+
+Link 3:
+This code was adpated from
+https://www.raylib.com/examples/core/loader.html?name=core_basic_screen_manager
+Accessed: Nov 23, 2026
+Aided in creation of a menu screen displaying game directions
+
+Link 4:
+This code was adapted from
+https://www.raylib.com/examples/textures/loader.html?name=textures_sprite_button
+Accessed: Nov 24, 2026
+Aided in creation of highlight effect when hovering over a text
 
 */
