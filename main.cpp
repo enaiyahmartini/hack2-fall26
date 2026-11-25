@@ -1,353 +1,604 @@
 /* ***********
 
-look to end of code for some citations
+
+look to end of code for some other citations
+
 
 *********** */
+
+
+// *********
+// Put into terminal to install API:
+// sudo apt update && sudo apt install libmusicbrainz5-2 libmusicbrainz5-dev
+
+
+/*
+   The following file allows you to get the metadata from the API
+   It then puts the metadata into readable format into the song object
+   It does this 10 times to add to the 10 song vector
+
+
+   I looked at the following code file with documentation as an example to help me:
+   https://github.com/metabrainz/libmusicbrainz/blob/master/examples/cdlookup.cc
+
+
+   I also used gemini on 11/23 at 7 am to help me fix bugs with how I accessed my
+   metadata
+*/
+
+
+// IF TESTING RUN THE FOLLOWING CODE IN TERMINAL:
+// g++ main.cpp -o a -lmusicbrainz5cc
+
 
 #include <iostream>
 #include <string>
 #include <vector>
+#include <map>
+#include <cmath>
+#include <cctype>
 #include "raylib.h"
+#include "musicbrainz5/Query.h"
+#include "musicbrainz5/Medium.h"
+#include "musicbrainz5/MediumList.h"
+#include "musicbrainz5/ReleaseGroup.h"
+#include "musicbrainz5/Track.h"
+#include "musicbrainz5/TrackList.h"
+#include "musicbrainz5/Recording.h"
+#include "musicbrainz5/Disc.h"
+#include "musicbrainz5/HTTPFetch.h"
+#include "musicbrainz5/Release.h"
+#include "musicbrainz5/Collection.h"
+#include "musicbrainz5/CollectionList.h"
+#include <musicbrainz5/ArtistCredit.h>
+#include <musicbrainz5/NameCreditList.h>
+#include <musicbrainz5/NameCredit.h>
+#include <musicbrainz5/Artist.h>
+#include <musicbrainz5/Tag.h>
+#include <unistd.h> //time library for mac/os
+#include "song.cpp"
 using namespace std;
+using namespace MusicBrainz5;
 
-class SongInformation {
-    public:
-        // setter functions
-        void SetNumber(string songNumber);
-        void SetTitle(string songTitle);
-        void SetAlbum(string songAlbum);
-        void SetGenre(string songGenre);
-        void SetDuration(string songDuration);
 
-        // getter functions
-        string GetNumber();
-        string GetTitle();
-        string GetAlbum();
-        string GetGenre();
-        string GetDuration();
-        string GetSelectedSong();
+vector<Song> getSongs(int limit, int offset) {
+   vector<Song> songs;
+   MusicBrainz5::CQuery Query("MyMusicApp/1.0 (contact@example.com)");
 
-    private:
-        string number;
-        string title;
-        string album;
-        string genre;
-        string duration;
-        string returnSelctedSong;
-};
 
-// takes the number in the position of the vector
-// and will eventually return it to another vector
-void SongInformation::SetNumber(string songNumber) {
-    number = songNumber;
-}
-string SongInformation::GetNumber() {
-    return number;
+   try{
+       MusicBrainz5::CQuery::tParamMap Params;
+       Params["query"] = "country:US AND tag:*";
+       Params["limit"] = to_string(limit);
+       Params["offset"] = to_string(offset);
+
+
+       MusicBrainz5::CMetadata Metadata = Query.Query("recording", "", "", Params);
+
+
+       if (Metadata.RecordingList()) {
+           MusicBrainz5::CRecordingList *RecordingList = Metadata.RecordingList();
+           cout << "Found " << RecordingList->NumItems() << " recordings(s)\n" << endl;
+
+
+           for (int i = 0; i < RecordingList->NumItems(); i++) {
+               MusicBrainz5::CRecording *Recording = RecordingList->Item(i);
+
+
+               string id = Recording->ID(); // Gets song ID
+               string title = Recording->Title(); // Gets song name
+
+
+               // 11/23/26 11:45 Gemini generated the following artist accessor because
+               // it kept returning errors that it couldn't find the following.
+               // This returns the first listed artist if the artist credit list isn't empty.
+               string artist = "Unknown";
+               if (Recording->ArtistCredit() &&
+                   Recording->ArtistCredit()->NameCreditList() &&
+                   Recording->ArtistCredit()->NameCreditList()->NumItems() > 0) {
+                  
+                   auto *NC = Recording->ArtistCredit()->NameCreditList()->Item(0);
+                   if (!NC->Name().empty()) {
+                       artist = NC->Name();
+                   } else if (NC->Artist()) {
+                       artist = NC->Artist()->Name();
+                   }
+               }
+
+
+               string album = "Unknown";
+               if (Recording->ReleaseList() && Recording->ReleaseList()->NumItems() > 0) {
+                   album = Recording->ReleaseList()->Item(0)->Title();
+               }
+
+
+               // the genre is inside the taglist in this database
+               string genre = "Unknown";
+               if (Recording->TagList() && Recording->TagList()->NumItems() > 0) {
+                   genre = Recording->TagList()->Item(0)->Name();
+               }
+
+
+               int durationS = Recording->Length()/1000; // Gives duration in seconds
+               int durationM = durationS / 60; // Gets the amount of time in minutes
+               durationS %= 60; // Gets remainder of time in seconds
+               string duration = "";
+               if (durationS < 10){ // Converts duration to a string
+                   duration = to_string(durationM) + ":0" + to_string(durationS);
+               } else {
+                   duration = to_string(durationM) + ":" + to_string(durationS);
+               }
+
+
+               Song s = Song(id, title, artist, album, genre, duration);
+               s.print();
+               songs.push_back(s);
+           }
+           return songs;
+       }
+   }
+   catch (MusicBrainz5::CConnectionError& Error)
+   {
+       cout << "Connection Exception: '" << Error.what() << "'" << endl;
+       cout << "LastResult: " << Query.LastResult() << endl;
+       cout << "LastHTTPCode: " << Query.LastHTTPCode() << endl;
+       cout << "LastErrorMessage: " << Query.LastErrorMessage() << endl;
+   }
+   catch (MusicBrainz5::CTimeoutError& Error)
+   {
+       cout << "Timeout Exception: '" << Error.what() << "'" << endl;
+       cout << "LastResult: " << Query.LastResult() << endl;
+       cout << "LastHTTPCode: " << Query.LastHTTPCode() << endl;
+       cout << "LastErrorMessage: " << Query.LastErrorMessage() << endl;
+   }
+   catch (MusicBrainz5::CAuthenticationError& Error)
+   {
+       cout << "Authentication Exception: '" << Error.what() << "'" << endl;
+       cout << "LastResult: " << Query.LastResult() << endl;
+       cout << "LastHTTPCode: " << Query.LastHTTPCode() << endl;
+       cout << "LastErrorMessage: " << Query.LastErrorMessage() << endl;
+   }
+   catch (MusicBrainz5::CFetchError& Error) {
+       cout << "Fetch Exception: '" << Error.what() << "'" << endl;
+       cout << "LastResult: " << Query.LastResult() << endl;
+       cout << "LastHTTPCode: " << Query.LastHTTPCode() << endl;
+       cout << "LastErrorMessage: " << Query.LastErrorMessage() << endl;
+   }
+   catch (MusicBrainz5::CRequestError& Error) {
+       cout << "Request Exception: '" << Error.what() << "'" << endl;
+       cout << "LastResult: " << Query.LastResult() << endl;
+       cout << "LastHTTPCode: " << Query.LastHTTPCode() << endl;
+       cout << "LastErrorMessage: " << Query.LastErrorMessage() << endl;
+   }
+   catch (MusicBrainz5::CResourceNotFoundError& Error) {
+       cout << "ResourceNotFound Exception: '" << Error.what() << "'" << endl;
+       cout << "LastResult: " << Query.LastResult() << endl;
+       cout << "LastHTTPCode: " << Query.LastHTTPCode() << endl;
+       cout << "LastErrorMessage: " << Query.LastErrorMessage() << endl;
+   }
+   return songs;
 }
 
-// takes the title in the position of the vector
-// and will eventually return it to another vector
-void SongInformation::SetTitle(string songTitle) {
-    title = songTitle;
-}
-string SongInformation::GetTitle() {
-    return title;
+
+
+
+map<string,int> scoreGenre = {
+ {"pop", 1},
+ {"kpop", 1},
+ {"anime", 1},
+
+
+
+
+ {"hip-hop", 2},
+
+
+
+
+ {"R&B", 3},
+ {"funk & disco", 3},
+
+
+
+
+ {"dance", 4},
+ {"electronic", 4},
+ {"electro", 4},
+
+
+
+
+ {"rock", 5},
+ {"punk", 5},
+ {"metal", 5},
+ {"heavy metal", 5},
+
+
+
+
+ {"indie", 6},
+
+
+
+
+ {"country", 7},
+ {"folk & acoustic", 7},
+
+
+
+
+ {"jazz", 8},
+ {"blues", 8},
+
+
+
+
+ {"afrobeats", 9},
+ {"caribbean", 9},
+ {"reggae", 9},
+
+
+
+
+ {"classical", 10},
+ {"christian & gospel", 10}};
+// this map shows the similarity between some of the music genre group and assign them to different score from 1 - 10.
+/* the categories generated by Chat GPT to show similarity and the codes 11/24/26 2:32AM*/
+
+
+int CalculatingScore(vector<Song> selectedSongs){ //getAverage
+   int sum = 0;
+   int average = 0;
+   int count = 0;
+   for (int i = 0; i < selectedSongs.size(); i++) {
+       if (scoreGenre.find(selectedSongs[i].getGenre()) != scoreGenre.end()) {
+          sum += scoreGenre[selectedSongs[i].getGenre()]; //if the genre is found in class object, then it will add that score assigned in scoreGenre.
+          count++; // the number of genre
+       }
+   } //research on map find and end functions (I used at, and it doesn't seem to work with more values(overflow, out of range))https://www.geeksforgeeks.org/cpp/map-find-function-in-c-stl/
+
+
+
+
+   if (count == 0) {
+      return -1;
+   }
+
+
+   average = static_cast<int>(sum/count);
+   return average;
 }
 
-// takes the song in the position of the vector
-// and will eventually return it to another vector
-void SongInformation::SetAlbum(string songAlbum) {
-    album = songAlbum;
-}
-string SongInformation::GetAlbum() {
-    return album;
+
+void getResult(int averageScore){
+
+
+   cout << "Get to know your playlist and your personality..." << endl;
+   if (averageScore == 1){
+       cout << "You are Pop lover. Extroverted, honest, and conventional. 🎤✨🪩💖 "<< endl ;
+       cout << "Researchers suggest that they are less creative and more uneasy than those enamored by other musical styles."<< endl;
+       cout << endl;
+   }
+   if (averageScore == 2){
+       cout << "You are Rap/Hip-Hop lover. 🎙️🎧🔊👟 " << endl;
+       cout << "The rap fans tended to have high self-esteem and were generally more outgoing than fans of other styles." << endl;
+       cout << endl;
+   }
+   if (averageScore == 3){
+       cout << "You are R&B lover. 🎹💜🕯️🎙️ " << endl;
+       cout << "Elevated agreeableness and emotional intelligence." << endl;
+       cout << "Also have high self-esteem and social confidence." << endl;
+       cout << endl;
+   }
+   if (averageScore == 4){
+       cout << "You are Dance/Electronic lover. 🎆🔊👟🎛️ Those who preferred dance music were typically outgoing, assertive, and open to experience but ranked lower than others in gentleness." << endl;
+       cout << endl;
+   }
+   if (averageScore == 5){
+       cout << "You are Rock/Heavy Metal lover. 🤘💀⛓️🔥 Rock and heavy metal often project images of anger, bravado, and aggression." << endl;
+       cout << "However, this study found such fans to be gentle, creative, and introverted." << endl;
+       cout << "They also tended to have low self-esteem." << endl;
+       cout << endl;
+   }
+   if (averageScore == 6){
+       cout << "You are Indie lover. 📻🌿🎞️🎸 Fans of the indie genre registered as introverted, intellectual, and creative, but less hardworking and gentle than fans of other styles. " << endl;
+       cout << "Passivity, anxiousness, and low self-esteem were other notable personality characteristics." << endl;
+       cout << endl;
+   }
+   if (averageScore == 7){
+       cout << "You are Country lover. 🤠🪕🎸🌾 You are identified as hardworking, conventional, outgoing, and conservative." << endl;
+       cout << "Although country music frequently centers on heartbreak, people who prefer it tended to be emotionally stable. They also ranked lower than others in openness to experience." << endl;
+       cout << endl;
+   }
+
+
+   if (averageScore == 8){
+       cout << "You are Jazz/Blues lover. 🎷🎺🎹🥃 Extroverted with high self-esteem. They also tend to be very creative, intelligent, and at ease." << endl;
+       cout << endl;
+   }
+  
+   if (averageScore == 9){
+       cout << "You are Afrobeats/Caribbean lover. 🥁🌍💃🔥 " << endl;
+       cout << endl;
+   }
+
+
+   if (averageScore == 10){
+       cout << "You are Classical lover. 🎻🎼🏛️🕯️ The study shows that classical music lovers were generally somewhat introverted but at ease with themselves." << endl;
+       cout << "Creativity and healthy self-esteem were common among them." << endl;
+       cout << endl;
+   }
 }
 
-// takes the genre in the position of the vector
-// and will eventually return it to another vector
-void SongInformation::SetGenre(string songGenre) {
-    genre = songGenre;
-}
-string SongInformation::GetGenre() {
-    return genre;
-}
 
-// takes the duration in the position of the vector
-// and will eventually return it to another vector
-void SongInformation::SetDuration(string songDuration) {
-    duration = songDuration;
-}
-string SongInformation::GetDuration() {
-    return duration;
-}
 
-string SongInformation::GetSelectedSong() {
-    return returnSelctedSong;
-}
+
+// link 3
+typedef enum GameScreen { LOGO = 0, TITLE, GAMEPLAY, ENDING} GameScreen;
+
+
+
 
 int main() {
 
-    // annoucement in terminal
-    cout << endl;
-    cout << "ATTENTION: Read these directions before proceeding to the port. Select 4 songs that will appear on the display. Be sure to click the name of the song you want selected!!! Once a song is selected is CANNOT be replaced. Upon selection of the song, you will be redirected to another screen. Please proceed to the port. Thank you! :)";
-    cout << endl;
 
-    // ******
-    // ****** TO BE CHANGED: VECTOR OF SONG INFORMATION *******
-    // ******
-    vector<string> songNumbers = {"1", "2", "3", "4", "5", "6", "7", "8", "9", "10"};
-    vector<string> songTitles = {"song1", "song2", "song3", "song4", "song5", "song6", "song7", "song8", "song9", "song10"};
-    vector<string> songAlbums = {"album1", "album2", "album3", "album4", "album5", "album6", "album7", "album8", "album9", "album10"};
-    vector<string> songGenre = {"genre1", "genre2", "genre3", "genre4", "genre5", "genre6", "genre7", "genre8", "genre9", "genre10"};
-    vector<string> songDuration = {"duration1", "duration2", "duration3", "duration4", "duration5", "duration6", "duration7", "duration8", "duration9", "duration10"};
-
-    // tracks which screen user is on
-    // want one song per screen
-    int currentScreen = 1;
-
-    // creating 2 vectors. one for all the classifying details of the song
-    // another for the 4 songs the user will pick
-    vector<SongInformation> songInfo;
-    vector<SongInformation> selectedSongs;
-
-    // adding all the information from our single detail vectors
-    // to a vector that has all the information, with the class SongInformation 
-    for (int i = 0; i < songNumbers.size(); ++i) {
-        SongInformation currentSong;
-
-        currentSong.SetNumber(songNumbers.at(i));
-        currentSong.SetTitle(songTitles.at(i));
-        currentSong.SetAlbum(songAlbums.at(i));
-        currentSong.SetGenre(songGenre.at(i));
-        currentSong.SetDuration(songDuration.at(i));
-
-        songInfo.push_back(currentSong);
-    }
-
-    //
-    //
-    //
-    /* TO CONTINUE FOR NEXT TIME: 
-    WITH THIS SELECTED SONGS VECTOR, TEAMMATE IS GOING TO
-    CLASSIFY THE PERSON BASED ON THE SONGS THEY CHOOSE
-    AFTER THAT:
-    WILL MAKE A SCREEN TO DISPLAY WHAT THE CODE THINKS THAT PERSON IS LIKE */
-    //
-    //
-    //
-
-    
-    InitWindow(1300, 800, "Spotify Playlist");
-    SetTargetFPS(30);
-
-    Texture2D photo = LoadTexture("spotifypicture.jpeg");
-    if (photo.id == 0) {
-        CloseWindow();
-        return -1;
-    }
+   // annoucement in terminal
+   cout << endl;
+   cout << "ATTENTION: Read these directions before proceeding to the port. Select 4 songs that will appear on the display. Be sure to click the name of the song you want selected!!! Once a song is selected is CANNOT be replaced. Upon selection of the song, you will be redirected to another screen. Please proceed to the port. Thank you! :)";
+   cout << endl;
 
 
-    while (!WindowShouldClose()) {
+   // tracks which screen user is on
+   // want one song per screen
+   int currentScreen = 0;
 
-        // adding the selected songs the user picked to a vector
-        // link 2 (check end of code)
-        for (int i = 0; i < songInfo.size(); ++i) {
-            Rectangle songArea = {110, (340 + (i * 40)), 200, 30};
 
-            if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON) && CheckCollisionPointRec(GetMousePosition(), songArea) && selectedSongs.size() < 10) {
-                selectedSongs.push_back(songInfo.at(i));
-                cout << "Song: " << songInfo.at(i).GetTitle() << endl;
-                currentScreen++;
-                break;
-            }
-        }
-        
-        BeginDrawing();
-        ClearBackground(BLACK);
+   // creating 2 vectors. one for all the classifying details of the song
+   // another for the 4 songs the user will pick
+   int limit = 10;
+   vector<Song> songInfo;
+   vector<Song> selectedSongs;
 
-        if (currentScreen <= 10) {
-            Rectangle source = { 0, 0, (float)photo.width, (float)photo.height };
-            Rectangle dest   = { 0, 0, 1300, 200 };
 
-            DrawTexturePro(photo, source, dest, {0, 0}, 0.0f, WHITE);
+   // Tracks if screen was pressed so that we know to reset the screen
+   bool pressed = true;
 
-            // text display strings
-            string yourPlaylist = "YOUR PLAYLIST :)";
-            string poundKey = "#";
-            string titleKey = "Title";
-            string albumKey = "Album";
-            string genreKey = "Genre";
-            string durationKey = "Duration";
-            string message1 = "Please Select a Song";
-            string message2 = "Screen " + to_string(currentScreen) + "/10";
-            // when using static_cast for line 182, yielded in an error. 
-            // the to_string code was written with the help of gemini 
-            // when prompted "can static_cast be used to convert this integer variable to a string"
-            // ascessed: Nov 23, 2026
-       
-            // coordinate system understanding from link 1 (check end of code)
-            DrawLine(0, 200, 1300, 200, WHITE);
 
-            // making play button
-            DrawCircle(50, 240, 25, LIME);
-            DrawTriangle(Vector2{42, 225}, Vector2{42, 255}, Vector2{65, 240}, BLACK);
+   for (int offset = 0; offset < 100; offset += limit) {
+       if (pressed){
+           vector<Song> page = getSongs(limit, offset);
+           songInfo.insert(songInfo.end(), page.begin(), page.end());
+           pressed = false;
+       }
 
-            // on screen directions
-            DrawText(message1.c_str(), 90, 230, 25, LIME);
-            DrawText(message2.c_str(), 1000, 230, 25, LIME);
-        
-            // making settings button
-            DrawCircle(1200, 240, 5, WHITE);
-            DrawLine(1215, 240, 1275, 240, WHITE);
-            DrawCircle(1200, 225, 5, WHITE);
-            DrawLine(1215, 225, 1275, 225, WHITE);
-            DrawCircle(1200, 255, 5, WHITE);
-            DrawLine(1215, 255, 1275, 255, WHITE);
-        
-            // making the filters
-            DrawLine(0, 320, 1300, 320, WHITE);
-            DrawText(poundKey.c_str(), 40, 290, 20, WHITE);
-            DrawText(titleKey.c_str(), 110, 290, 20, WHITE);
-            DrawText(albumKey.c_str(), 400, 290, 20, WHITE);
-            DrawText(genreKey.c_str(), 770, 290, 20, WHITE);
-            DrawText(durationKey.c_str(), 1110, 290, 20, WHITE);
 
-            // looping through the vector of songs. calling our functions to place 
-            // the number, title, album, etc of the song in a list on the screen
-            for (int i = 0; i < songInfo.size(); ++i) {
-                DrawText(songInfo.at(i).GetNumber().c_str(), 40, 340 + (i * 40), 20, WHITE);
-                DrawText(songInfo.at(i).GetTitle().c_str(), 110, 340 + (i * 40), 20, WHITE);
-                DrawText(songInfo.at(i).GetAlbum().c_str(), 400, 340 + (i * 40), 20, WHITE);
-                DrawText(songInfo.at(i).GetGenre().c_str(), 770, 340 + (i * 40), 20, WHITE);
-                DrawText(songInfo.at(i).GetDuration().c_str(), 1110, 340 + (i * 40), 20, WHITE);
-            }
-        }
-        else {
-            DrawText("Check", 250, 250, 50, LIME);
+       // // Accessed 11/24/26 10:40 pm https://www.geeksforgeeks.org/cpp/vector-erase-in-cpp-stl/
+       // if (pressed) {
+       //     songInfo.erase(songInfo.begin(), songInfo.begin() + 9);
+       //     pressed = false;
+       // }
 
-            // **********
-            // will replace; just here as placeholder until we get all code together
-            // **********
-            int averageScore = 1;
 
-            if (averageScore == 1) {
-                Texture2D photo = LoadTexture("pop.jpeg");
-                if (photo.id == 0) {
-                    CloseWindow();
-                    return -1;
-                }
-                Rectangle source = { 0, 0, (float)photo.width, (float)photo.height };
-                Rectangle dest   = { 0, 0, 1300, 200 };
-                DrawTexturePro(photo, source, dest, {0, 0}, 0.0f, WHITE);
-            }
-            else if (averageScore == 2) {
-                Texture2D photo = LoadTexture("rap.jpeg");
-                if (photo.id == 0) {
-                    CloseWindow();
-                    return -1;
-                }
-                Rectangle source = { 0, 0, (float)photo.width, (float)photo.height };
-                Rectangle dest   = { 0, 0, 1300, 200 };
-                DrawTexturePro(photo, source, dest, {0, 0}, 0.0f, WHITE);
-            }
-            else if (averageScore == 3) {
-                Texture2D photo = LoadTexture("randb.jpeg");
-                if (photo.id == 0) {
-                    CloseWindow();
-                    return -1;
-                }
-                Rectangle source = { 0, 0, (float)photo.width, (float)photo.height };
-                Rectangle dest   = { 0, 0, 1300, 200 };
-                DrawTexturePro(photo, source, dest, {0, 0}, 0.0f, WHITE);
-            }
-            else if (averageScore == 4) {
-                Texture2D photo = LoadTexture("dance.jpeg");
-                if (photo.id == 0) {
-                    CloseWindow();
-                    return -1;
-                }
-                Rectangle source = { 0, 0, (float)photo.width, (float)photo.height };
-                Rectangle dest   = { 0, 0, 1300, 200 };
-                DrawTexturePro(photo, source, dest, {0, 0}, 0.0f, WHITE);
-            }
-            else if (averageScore == 5) {
-                Texture2D photo = LoadTexture("rock.jpeg");
-                if (photo.id == 0) {
-                    CloseWindow();
-                    return -1;
-                }
-                Rectangle source = { 0, 0, (float)photo.width, (float)photo.height };
-                Rectangle dest   = { 0, 0, 1300, 200 };
-                DrawTexturePro(photo, source, dest, {0, 0}, 0.0f, WHITE);
-            }
-            else if (averageScore == 6) {
-                Texture2D photo = LoadTexture("indie.jpeg");
-                if (photo.id == 0) {
-                    CloseWindow();
-                    return -1;
-                }
-                Rectangle source = { 0, 0, (float)photo.width, (float)photo.height };
-                Rectangle dest   = { 0, 0, 1300, 200 };
-                DrawTexturePro(photo, source, dest, {0, 0}, 0.0f, WHITE);
-            }
-            else if (averageScore == 7) {
-                Texture2D photo = LoadTexture("country.jpeg");
-                if (photo.id == 0) {
-                    CloseWindow();
-                    return -1;
-                }
-                Rectangle source = { 0, 0, (float)photo.width, (float)photo.height };
-                Rectangle dest   = { 0, 0, 1300, 200 };
-                DrawTexturePro(photo, source, dest, {0, 0}, 0.0f, WHITE);
-            }
-            else if (averageScore == 8) {
-                Texture2D photo = LoadTexture("jazz.jpeg");
-                if (photo.id == 0) {
-                    CloseWindow();
-                    return -1;
-                }
-                Rectangle source = { 0, 0, (float)photo.width, (float)photo.height };
-                Rectangle dest   = { 0, 0, 1300, 200 };
-                DrawTexturePro(photo, source, dest, {0, 0}, 0.0f, WHITE);
-            }
-            else if (averageScore == 9) {
-                Texture2D photo = LoadTexture("afrobeats.jpeg");
-                if (photo.id == 0) {
-                    CloseWindow();
-                    return -1;
-                }
-                Rectangle source = { 0, 0, (float)photo.width, (float)photo.height };
-                Rectangle dest   = { 0, 0, 1300, 200 };
-                DrawTexturePro(photo, source, dest, {0, 0}, 0.0f, WHITE);
-            }
-            else if (averageScore == 10) {
-                Texture2D photo = LoadTexture("classical.jpeg");
-                if (photo.id == 0) {
-                    CloseWindow();
-                    return -1;
-                }
-                Rectangle source = { 0, 0, (float)photo.width, (float)photo.height };
-                Rectangle dest   = { 0, 0, 1300, 200 };
-                DrawTexturePro(photo, source, dest, {0, 0}, 0.0f, WHITE);
-            }
-        }
+       // wait one second to match MusicBrainz's 1 request/second rate limit
+       sleep(1);
+   }
+  
+   InitWindow(1300, 800, "Spotify Playlist");
+   SetTargetFPS(30);
 
-        
-        EndDrawing();
 
-    }
+   Texture2D photo = LoadTexture("spotifypicture.jpeg");
+   if (photo.id == 0) {
+       CloseWindow();
+       return -1;
+   }
 
-    UnloadTexture(photo);
-    CloseWindow();
 
-    return 0;
+   // will be updated later
+   Texture2D finalScreen = {};
+   bool finalScreenDisplay = false;
+
+
+   Rectangle startButton = {450, 600, 400, 80};
+
+
+   while (!WindowShouldClose()) {
+
+
+       // adding the selected songs the user picked to a vector
+       // link 2 (check end of code)
+       if (currentScreen >= 1 && currentScreen <= 10) {
+           for (int i = 0; i < 10; ++i) {
+               Rectangle songArea = {110, (340 + (i * 40.0f)), 200, 30};
+
+
+               if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON) && CheckCollisionPointRec(GetMousePosition(), songArea) && selectedSongs.size() < 10) {
+                   selectedSongs.push_back(songInfo.at(i));
+                   cout << "Song: " << songInfo.at(i).getName() << endl;
+                   currentScreen++;
+                   pressed = true;
+                   break;
+               }
+           }   
+       }
+      
+      
+       BeginDrawing();
+       ClearBackground(BLACK);
+
+
+
+
+       if (currentScreen == 0) {
+           string startMessage1 = "Hello! Welcome to our code! :)";
+           string directions = "Directions:";
+           string direction1 = "1) You will be directed to a Spotify Screen. Please select your favorite song.";
+           string direction2 = "2) There will be 10 screens in total to choose one song from each.";
+           string direction3 = "3) Then, you will be sent to a personality analysis based on your choices";
+           string direction4 = "4) Click ''Start Game'' to continue.";
+
+
+           DrawText(startMessage1.c_str(), 70, 100, 70, LIME);
+           DrawText(directions.c_str(), 70, 230, 50, LIME);
+           DrawText(direction1.c_str(), 70, 320, 30, WHITE);
+           DrawText(direction2.c_str(), 70, 380, 30, WHITE);
+           DrawText(direction3.c_str(), 70, 440, 30, WHITE);
+           DrawText(direction4.c_str(), 70, 500, 30, WHITE);
+      
+           string sb = "Start Game";
+           DrawRectangleRec(startButton, LIME);
+           DrawText(sb.c_str(), 510, 625, 40, BLACK);
+
+
+           if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON) && CheckCollisionPointRec(GetMousePosition(), startButton)) {
+
+
+               currentScreen++;
+           }
+       }
+       else if (currentScreen >= 1 && currentScreen <= 10) {
+           Rectangle source = { 0, 0, (float)photo.width, (float)photo.height };
+           Rectangle dest   = { 0, 0, 1300, 200 };
+
+
+           DrawTexturePro(photo, source, dest, {0, 0}, 0.0f, WHITE);
+
+
+           // text display strings
+           string yourPlaylist = "YOUR PLAYLIST :)";
+           string poundKey = "#";
+           string titleKey = "Title";
+           string albumKey = "Album";
+           string genreKey = "Genre";
+           string durationKey = "Duration";
+           string message1 = "Please Select a Song";
+           string message2 = "Screen " + to_string(currentScreen) + "/10";
+           // when using static_cast for line 182, yielded in an error.
+           // the to_string code was written with the help of gemini
+           // when prompted "can static_cast be used to convert this integer variable to a string"
+           // ascessed: Nov 23, 2026
+     
+           // coordinate system understanding from link 1 (check end of code)
+           DrawLine(0, 200, 1300, 200, WHITE);
+
+
+           // making play button
+           DrawCircle(50, 240, 25, LIME);
+           DrawTriangle(Vector2{42, 225}, Vector2{42, 255}, Vector2{65, 240}, BLACK);
+
+
+           // on screen directions
+           DrawText(message1.c_str(), 90, 230, 25, LIME);
+           DrawText(message2.c_str(), 1000, 230, 25, LIME);
+      
+           // making settings button
+           DrawCircle(1200, 240, 5, WHITE);
+           DrawLine(1215, 240, 1275, 240, WHITE);
+           DrawCircle(1200, 225, 5, WHITE);
+           DrawLine(1215, 225, 1275, 225, WHITE);
+           DrawCircle(1200, 255, 5, WHITE);
+           DrawLine(1215, 255, 1275, 255, WHITE);
+      
+           // making the filters
+           DrawLine(0, 320, 1300, 320, WHITE);
+           DrawText(poundKey.c_str(), 40, 290, 20, WHITE);
+           DrawText(titleKey.c_str(), 110, 290, 20, WHITE);
+           DrawText(albumKey.c_str(), 400, 290, 20, WHITE);
+           DrawText(genreKey.c_str(), 770, 290, 20, WHITE);
+           DrawText(durationKey.c_str(), 1110, 290, 20, WHITE);
+
+
+           // looping through the vector of songs. calling our functions to place
+           // the number, title, album, etc of the song in a list on the screen
+           for (int i = 0; i < 10; ++i) {
+               DrawText(to_string(i + 1).c_str(), 40, 340 + (i * 40), 20, WHITE);
+               DrawText(songInfo.at(i).getName().c_str(), 110, 340 + (i * 40), 20, WHITE);
+               DrawText(songInfo.at(i).getAlbum().c_str(), 400, 340 + (i * 40), 20, WHITE);
+               DrawText(songInfo.at(i).getGenre().c_str(), 770, 340 + (i * 40), 20, WHITE);
+               DrawText(songInfo.at(i).getDuration().c_str(), 1110, 340 + (i * 40), 20, WHITE);
+           }
+       }
+       else {
+
+
+           if (finalScreenDisplay == false) {
+               int averageScore = CalculatingScore(selectedSongs);
+               getResult(averageScore);
+
+
+               if (averageScore == 1) {
+                   finalScreen = LoadTexture("pop.jpg");
+               }
+               else if (averageScore == 2) {
+                   finalScreen = LoadTexture("rap.jpg");
+               }
+               else if (averageScore == 3) {
+                   finalScreen = LoadTexture("randb.jpg");
+               }
+               else if (averageScore == 4) {
+                   finalScreen = LoadTexture("dance.jpg");
+               }
+               else if (averageScore == 5) {
+                   finalScreen = LoadTexture("rock.jpg");
+               }
+               else if (averageScore == 6) {
+                   finalScreen = LoadTexture("indie.jpg");
+               }
+               else if (averageScore == 7) {
+                   finalScreen = LoadTexture("country.jpg");
+               }
+               else if (averageScore == 8) {
+                   finalScreen = LoadTexture("jazz.jpg");
+               }
+               else if (averageScore == 9) {
+                   finalScreen = LoadTexture("afrobeats.jpg");
+               }
+               else if (averageScore == 10) {
+                   finalScreen = LoadTexture("classical.jpg");
+               }
+               else {
+                   finalScreen = LoadTexture("none.jpg");
+               }
+
+
+               finalScreenDisplay = true;
+           }
+
+
+           Rectangle source = { 0, 0, (float)finalScreen.width, (float)finalScreen.height };
+           Rectangle dest   = { 0, 0, 1300, 800 };
+           DrawTexturePro(finalScreen, source, dest, {0, 0}, 0.0f, WHITE);
+
+
+       }
+
+
+      
+       EndDrawing();
+
+
+   }
+
+
+   UnloadTexture(photo);
+   UnloadTexture(finalScreen);
+
+
+   CloseWindow();
+
+
+   return 0;
 }
 
 
 
-/* 
 
-Link 1: 
+
+
+/*
+
+
+Link 1:
 This code was adpated from
 https://youtu.be/RGzj-PF7D74?si=8OhCLHy0wwLSN3le
 Accessed: Nov 17, 2026
@@ -355,12 +606,15 @@ Aided in overall understanding of Raylib
 Used specifically in the understanding of how the coordinate system works
 
 
-Link 2: 
+
+
+Link 2:
 This code was adapted from
 https://youtu.be/klqbAOAFBXw?si=Srq6evwa5dmJy5hG
 Accessed: Nov 20, 2026
 Aided in creation adding selected songs to new vector
 by using Raylib CheckCollision function
+
 
 Link 3:
 This code was adpated from
@@ -368,10 +622,5 @@ https://www.raylib.com/examples/core/loader.html?name=core_basic_screen_manager
 Accessed: Nov 23, 2026
 Aided in creation of a menu screen displaying game directions
 
-Link 4:
-This code was adapted from
-https://www.raylib.com/examples/textures/loader.html?name=textures_sprite_button
-Accessed: Nov 24, 2026
-Aided in creation of highlight effect when hovering over a text
 
 */
