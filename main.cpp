@@ -365,14 +365,14 @@ int main() {
 
 
    for (int offset = 0; offset < 100; offset += limit) {
-       if (pressed){
+       //if (pressed){
            vector<Song> page = getSongs(limit, offset);
            songInfo.insert(songInfo.end(), page.begin(), page.end());
            pressed = false;
-       }
+       //}
 
 
-       // // Accessed 11/24/26 10:40 pm https://www.geeksforgeeks.org/cpp/vector-erase-in-cpp-stl/
+       // Accessed 11/24/26 10:40 pm https://www.geeksforgeeks.org/cpp/vector-erase-in-cpp-stl/
        // if (pressed) {
        //     songInfo.erase(songInfo.begin(), songInfo.begin() + 9);
        //     pressed = false;
@@ -415,6 +415,7 @@ int main() {
                if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON) && CheckCollisionPointRec(GetMousePosition(), songArea) && selectedSongs.size() < 10) {
                    selectedSongs.push_back(songInfo.at(i));
                    cout << "Song: " << songInfo.at(i).getName() << endl;
+                   songInfo.erase(songInfo.begin(), songInfo.begin() + 10);
                    currentScreen++;
                    pressed = true;
                    break;
